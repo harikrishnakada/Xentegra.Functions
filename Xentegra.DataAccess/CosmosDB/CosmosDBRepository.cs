@@ -17,7 +17,7 @@ namespace Xentegra.DataAccess.CosmosDB
             _telemetryClient = new TelemetryClient(configuration);
         }
 
-        public async Task<T> GetItem<T>(string id, string pk) where T : class
+        public async Task<ItemResponse<T>> GetItem<T>(string id, string pk) where T : class
         {
             PartitionKey partitionKey = new(pk);
 
@@ -33,10 +33,44 @@ namespace Xentegra.DataAccess.CosmosDB
             this._container = _cosmosClient.GetContainer(databaseName, containerName);
         }
 
-        public async Task<T> UpsertItem<T>(T item, string pk) where T : class
+        public async Task<ItemResponse<T>> UpsertItem<T>(T item, string pk) where T : class
         {
             PartitionKey partitionKey = new(pk);
             var result = await _container.UpsertItemAsync<T>(item, partitionKey);
+            return result;
+        }
+
+        public async Task<ItemResponse<T>> ReadAndUpsertItem<T>(string id, string pk, Func<T, Task<T>> UpdateItem) where T : class
+        {
+            ItemResponse<T> result = null;
+            T item = await GetItem<T>(id, pk);
+            if (item != null)
+            {
+                string eTag = (item as ItemResponse<T>).ETag;
+
+                item = await UpdateItem(item);
+
+                ItemRequestOptions options = new ItemRequestOptions { IfMatchEtag = eTag };
+                PartitionKey partitionKey = new(pk);
+                result = await _container.UpsertItemAsync<T>(item, partitionKey, requestOptions: options);
+            }
+            return result;
+        } 
+        
+        public async Task<ItemResponse<T>> ReadAndUpsertItem<T>(string id, string pk, Func<T, T> UpdateItem) where T : class
+        {
+            ItemResponse<T> result = null;
+            ItemResponse<T> itemResponse = await GetItem<T>(id, pk);
+            if (itemResponse != null)
+            {
+                string eTag = itemResponse.ETag;
+                var item = itemResponse.Resource;
+                item = UpdateItem(item);
+
+                ItemRequestOptions options = new ItemRequestOptions { IfMatchEtag = eTag };
+                PartitionKey partitionKey = new(pk);
+                result = await _container.UpsertItemAsync<T>(item, partitionKey, requestOptions: options);
+            }
             return result;
         }
 
