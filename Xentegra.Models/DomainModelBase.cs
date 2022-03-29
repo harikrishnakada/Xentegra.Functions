@@ -10,12 +10,12 @@ namespace Xentegra.Models
     {
         public string id { get; set; }
 
-        public DateTime createDateTime { get; set; } = DateTime.Now;
+        public DateTime createDateTime { get; set; }
         public DateTime lastChangedDateTime { get; set; }
 
         public string pk { get; set; }
 
-        public void OnCreated(string? _id = null)
+        public virtual void OnCreated(string? _id = null)
         {
             if (string.IsNullOrEmpty(_id))
                 this.id = Guid.NewGuid().ToString();
@@ -26,9 +26,17 @@ namespace Xentegra.Models
             this.lastChangedDateTime = this.createDateTime;
         }
 
-        public void OnChanged()
+        public virtual void OnChanged()
         {
             this.lastChangedDateTime = DateTime.Now;
+        }
+
+        public virtual void SetAudit()
+        {
+            if (string.IsNullOrEmpty(id))
+                OnCreated();
+            else
+                OnChanged();
         }
     }
 }

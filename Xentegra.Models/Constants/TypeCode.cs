@@ -16,4 +16,11 @@ namespace Xentegra.Models.Constants
         public const string Demo = "Demo";
         public const string POC = "POC";
     }
+
+    public enum RequestStatus
+    {
+        Approved,
+        Declined,
+        Pending
+    }
 }

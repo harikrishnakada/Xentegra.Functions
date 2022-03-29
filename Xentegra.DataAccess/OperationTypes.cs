@@ -12,6 +12,7 @@ namespace Xentegra.DataAccess
         Update,
         Delete,
         Read,
+        ReadAll,
         Upsert
     }
 }
