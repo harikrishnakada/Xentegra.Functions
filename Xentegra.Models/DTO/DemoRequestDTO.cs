@@ -20,6 +20,7 @@ namespace Xentegra.Models.DTO
         public string phone { get; set; }
         public string company { get; set; }
 
+        public string requestStatus { get; set; }
         public TechnologyDTO technology { get; set; }
 
         public string GetPartitionKey()

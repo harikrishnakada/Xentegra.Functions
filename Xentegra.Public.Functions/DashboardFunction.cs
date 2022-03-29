@@ -32,18 +32,16 @@ namespace Xentegra.Public.Functions
             _itemsContainer = itemsContainer;
         }
 
-        [FunctionName("UpsertDemoRequest")]
-        [OpenApiOperation(operationId: "UpsertDemoRequest", tags: new[] { "name" })]
+        [FunctionName("CreateDemoRequest")]
+        [OpenApiOperation(operationId: "CreateDemoRequest", tags: new[] { "name" })]
         [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
         [OpenApiParameter(name: "name", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "The **Name** parameter")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
-        public async Task<IActionResult> UpsertDemoRequest(
-            [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] DemoRequest demoRequest, HttpRequest req, ILogger log)
+        public async Task<IActionResult> CreateDemoRequest(
+            [HttpTrigger(AuthorizationLevel.Function, "post", Route = "public/dashboard/createDemoRequest")] DemoRequest demoRequest, HttpRequest req, ILogger log)
         {
             try
             {
-                log.LogInformation("C# HTTP trigger function processed a request.");
-
                 DemoRequest response;
 
                 if (string.IsNullOrEmpty(demoRequest.technology?.id))
@@ -52,7 +50,7 @@ namespace Xentegra.Public.Functions
                     return new BadRequestObjectResult($"The technology is blank in the request");
                 }
 
-                Technology technology = await this._itemsContainer.GetItem<Technology>(demoRequest.technology?.id, demoRequest.technology?.GetPartitionKey());
+                Technology technology = await this._itemsContainer.GetItem<Technology>(demoRequest.technology?.id, demoRequest.technology.GetPartitionKey());
                 if (technology == null)
                 {
                     log.LogError($"The technology with name {technology.name} does not exist");
@@ -62,23 +60,36 @@ namespace Xentegra.Public.Functions
                 //set the partitionkey.
                 demoRequest.SetPartitionKey();
 
-                if (string.IsNullOrEmpty(demoRequest.id))
-                {
-                    demoRequest.OnCreated();
-                    demoRequest.requestStatus = RequestStatus.Pending.ToString();
-                    response = await this._itemsContainer.CreateItemAsync<DemoRequest>(demoRequest, demoRequest.pk);
-                }
-                else
-                {
-                    DemoRequest SetEntity(DemoRequest item)
-                    {
-                        item.SetEntity(demoRequest);
-                        return item;
-                    }
-                    response = await this._itemsContainer.ReadAndUpsertItem<DemoRequest>(demoRequest.id, demoRequest.pk, SetEntity);
-                }
+                demoRequest.OnCreated();
+                demoRequest.requestStatus = RequestStatus.Pending.ToString();
 
-                return new OkObjectResult(response);
+                //Only save the necessary information.
+                demoRequest.technology = new()
+                {
+                    id = demoRequest.technology.id,
+                    name = demoRequest.technology.name,
+                };
+
+                response = await this._itemsContainer.CreateItemAsync<DemoRequest>(demoRequest, demoRequest.pk);
+
+                DemoRequestDTO demoRequestDTO = new()
+                {
+                    id = response.id,
+                    name = response.name,
+                    email = response.email,
+                    requestType = response.requestType,
+                    company = response.company,
+                    phone = response.phone,
+                    requestStatus = response.requestStatus,
+                    technology = new()
+                    {
+                        id = technology.id,
+                        name = technology.name,
+                        resourceGroupName = technology.resourceGroupName
+                    }
+                };
+
+                return new OkObjectResult(demoRequestDTO);
             }
             catch (Exception ex)
             {
@@ -86,55 +97,17 @@ namespace Xentegra.Public.Functions
             }
         }
 
-        [FunctionName("GetAllDemoRequests")]
-        [OpenApiOperation(operationId: "GetAllDemoRequests", tags: new[] { "name" })]
+        [FunctionName("GetAllTechnologies")]
+        [OpenApiOperation(operationId: "GetAllTechnologies", tags: new[] { "name" })]
         [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
         [OpenApiParameter(name: "name", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "The **Name** parameter")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
-        public async Task<IActionResult> GetAllDemoRequests(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req, ILogger log)
+        public async Task<IActionResult> GetAllTechnologies(
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "public/dashboard/getAllTechnologies")] HttpRequest req, ILogger log)
         {
-            var items = await _itemsContainer.GetItems<DemoRequest>(log:log);
+            var items = await _itemsContainer.GetItems<Technology>(log: log);
 
-            return new OkObjectResult(items.Where(x=>x.enityType == typeof(DemoRequest).ToString()));
-        }
-
-        [FunctionName("UpsertTechnology")]
-        [OpenApiOperation(operationId: "UpsertTechnology", tags: new[] { "name" })]
-        [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
-        [OpenApiParameter(name: "name", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "The **Name** parameter")]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
-        public async Task<IActionResult> UpsertTechnology(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] Technology technology, HttpRequest req, ILogger log)
-        {
-            //set the partitionkey.
-            technology.SetPartitionKey();
-
-            Technology response;
-            try
-            {
-                if (string.IsNullOrEmpty(technology.id))
-                {
-                    technology.OnCreated();
-                    response = await this._itemsContainer.CreateItemAsync<Technology>(technology, technology.pk);
-                }
-                else
-                {
-                    Technology SetEntity(Technology item)
-                    {
-                        item.SetEntity(technology);
-                        return item;
-                    }
-
-                    response = await this._itemsContainer.ReadAndUpsertItem<Technology>(technology.id, technology.pk, SetEntity);
-                }
-            }
-            catch (Exception ex)
-            {
-                return new BadRequestObjectResult(ex.Message);
-            }
-
-            return new OkObjectResult(response);
+            return new OkObjectResult(items.Where(x => x.enityType == typeof(Technology).ToString()));
         }
 
     }

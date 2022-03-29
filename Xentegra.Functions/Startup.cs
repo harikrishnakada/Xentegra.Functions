@@ -5,6 +5,8 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
+using Microsoft.Azure.Cosmos;
+
 //using Azure.Identity;
 
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
@@ -14,6 +16,8 @@ using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Graph;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
+
+using Xentegra.DataAccess.CosmosDB.Containers;
 
 [assembly: FunctionsStartup(typeof(Xentegra.Functions.Startup))]
 
@@ -41,6 +45,13 @@ namespace Xentegra.Functions
 
             builder.Services.AddSingleton<IAzure>((s) => { return azure; });
             builder.Services.AddSingleton<GraphServiceClient>((s) => { return graphClient; });
+
+
+            var cosmos_cs = Environment.GetEnvironmentVariable("COSMOSDB_CS");
+            CosmosClient cosmosClient = new(cosmos_cs);
+
+            builder.Services.AddSingleton(cosmosClient);
+            builder.Services.AddSingleton<IItemsContainer, ItemsContainer>();
         }
 
         private static async Task<GraphServiceClient> GetGraphApiClient()

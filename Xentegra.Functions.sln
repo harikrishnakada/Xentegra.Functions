@@ -7,9 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xentegra.Functions", "Xente
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xentegra.Models", "Xentegra.Models\Xentegra.Models.csproj", "{BB28B1DA-A8C5-4809-B131-962CB8E3ED3E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xentegra.Public.Functions", "Xentegra.Public.Functions\Xentegra.Public.Functions.csproj", "{13163EE6-6CAA-41B8-804E-3988300170A2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xentegra.Public.Functions", "Xentegra.Public.Functions\Xentegra.Public.Functions.csproj", "{13163EE6-6CAA-41B8-804E-3988300170A2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xentegra.DataAccess", "Xentegra.DataAccess\Xentegra.DataAccess.csproj", "{39D4292F-6A3C-44AC-BAEE-B64C0EF5180B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xentegra.DataAccess", "Xentegra.DataAccess\Xentegra.DataAccess.csproj", "{39D4292F-6A3C-44AC-BAEE-B64C0EF5180B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

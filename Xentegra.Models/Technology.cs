@@ -21,6 +21,10 @@ namespace Xentegra.Models
         {
             this.pk = this.name;
         }
+        public string GetPartitionKey()
+        {
+           return this.name;
+        }
 
         public Technology SetEntity(Technology entity)
         {

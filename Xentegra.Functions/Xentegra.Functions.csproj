@@ -4,6 +4,7 @@
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.26.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
     <PackageReference Include="Microsoft.Azure.Management.Compute.Fluent" Version="1.38.0" />
     <PackageReference Include="Microsoft.Azure.Management.Fluent" Version="1.38.0" />
@@ -12,6 +13,7 @@
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.0.1" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Xentegra.DataAccess\Xentegra.DataAccess.csproj" />
     <ProjectReference Include="..\Xentegra.Models\Xentegra.Models.csproj" />
   </ItemGroup>
   <ItemGroup>

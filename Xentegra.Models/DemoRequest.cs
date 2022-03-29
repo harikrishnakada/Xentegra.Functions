@@ -37,6 +37,13 @@ namespace Xentegra.Models
 
             enityType = typeof(DemoRequest).ToString();
 
+            //Only save the necessary information.
+            technology = new()
+            {
+                id = entity.technology.id,
+                name = entity.technology.name,
+            };
+
             SetAudit();
 
             return this;
