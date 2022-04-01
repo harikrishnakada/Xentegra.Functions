@@ -17,6 +17,8 @@ using Microsoft.OpenApi.Models;
 
 using Newtonsoft.Json;
 
+using Xentegra.Models;
+
 namespace Xentegra.Functions
 {
     public class VMFunctions
@@ -32,42 +34,48 @@ namespace Xentegra.Functions
             _graphServiceClient = graphServiceClient;
         }
 
-        [FunctionName("VMFunctions")]
+        [FunctionName("GetAllVMByResourceGroupFunction")]
         [OpenApiOperation(operationId: "Run", tags: new[] { "name" })]
         [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
         [OpenApiParameter(name: "name", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "The **Name** parameter")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
-        public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req)
+        public async Task<IActionResult> GetAllVMByResourceGroupFunction(
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "vm/{rg}")] HttpRequest req, ILogger log, string rg)
         {
-            _logger.LogInformation("C# HTTP trigger function processed a request.");
-
-            string resourceGroupName = req.Query["rg"];
-
-            var status = req.Query["status"];
-
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            resourceGroupName = resourceGroupName ?? data?.resourceGroupName;
+            log.LogInformation("log C# HTTP trigger function processed a request.");
 
             var vms = new List<object>();
 
-            foreach (var virtualMachine in _azure.VirtualMachines.ListByResourceGroup(resourceGroupName))
+            foreach (var virtualMachine in _azure.VirtualMachines.ListByResourceGroup(rg))
             {
-                if (status == "true")
-                    await _azure.VirtualMachines.StartAsync(resourceGroupName, virtualMachine.Name);
-                if (status == "false")
-                    await _azure.VirtualMachines.DeallocateAsync(resourceGroupName, virtualMachine.Name);
-
                 _logger.LogInformation($"{virtualMachine.Name}");
-                var obj = new { virtualMachine.Name, virtualMachine.OSType, virtualMachine.PowerState };
+                var obj = new { virtualMachine.Id, virtualMachine.Name, virtualMachine.OSType, virtualMachine.PowerState };
                 vms.Add(obj);
-
             }
             return new OkObjectResult(vms);
         }
 
-      
+        [FunctionName("ToggleVMFunction")]
+        [OpenApiOperation(operationId: "Run", tags: new[] { "name" })]
+        [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
+        [OpenApiParameter(name: "name", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "The **Name** parameter")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
+        public async Task<IActionResult> ToggleVMFunction(
+            [HttpTrigger(AuthorizationLevel.Function, "post", Route = "vm/status/{turnOn}")] VirtualMaachine vm, HttpRequest req, ILogger log, bool turnOn)
+        {
+            log.LogInformation("C# HTTP trigger function processed a request.");
+
+            var virtualMachine = _azure.VirtualMachines.GetById(vm.id);
+
+            if (turnOn)
+                await virtualMachine.StartAsync();
+            else
+                await virtualMachine.DeallocateAsync();
+
+            return new OkObjectResult(true);
+        }
+
+
     }
 }
 

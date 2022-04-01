@@ -121,11 +121,25 @@ namespace Xentegra.Functions
         public async Task<IActionResult> GetAllDemoRequests(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = "dashboard/getAllDemoRequests")] HttpRequest req, ILogger log)
         {
-            var items = await _itemsContainer.GetItems<DemoRequest>(log: log);
+            var items = await _itemsContainer.GetItems<dynamic>(log: log);
 
             var demoRequests = items.Where(x => x.enityType == typeof(DemoRequest).ToString());
+            var technologioes = items.Where(x => x.enityType == typeof(Technology).ToString());
 
-            return new OkObjectResult(demoRequests);
+            var demoRequestsDto = from dr in demoRequests
+                      join t in technologioes on dr.technology?.id equals t.id
+                      select new
+                      {
+                          dr,
+                          t
+                      };
+
+            foreach (var item in demoRequestsDto)
+            {
+                item.dr.technology = item.t;
+            }
+
+            return new OkObjectResult(demoRequestsDto.Select(x=>x.dr));
         }
 
         [FunctionName("UpsertTechnology")]

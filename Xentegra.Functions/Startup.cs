@@ -57,8 +57,8 @@ namespace Xentegra.Functions
         private static async Task<GraphServiceClient> GetGraphApiClient()
         {
             var tenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID");
-            var clientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
-            var clientSecret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
+            var clientId = Environment.GetEnvironmentVariable("GRAPH_CLIENT_ID");
+            var clientSecret = Environment.GetEnvironmentVariable("GRAPH_CLIENT_SECRET");
 
             var domain = Environment.GetEnvironmentVariable("AZURE_DOMAIN_NAME"); ;
 

@@ -14,6 +14,7 @@ using System.Net;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Enums;
 using Xentegra.Models.DTO;
 using System.Linq;
+using Xentegra.Models.Constants;
 
 namespace Xentegra.Functions
 {
@@ -32,25 +33,22 @@ namespace Xentegra.Functions
         [OpenApiParameter(name: "name", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "The **Name** parameter")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
         public async Task<IActionResult> AddUserToGroup(
-    [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req, ILogger log)
+    [HttpTrigger(AuthorizationLevel.Function, "post", Route = "graph/groupMembers")] GraphUserDTO data, HttpRequest req, ILogger log)
         {
             try
             {
-
-                string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-                GraphUserDTO data = JsonConvert.DeserializeObject<GraphUserDTO>(requestBody);
                 User user;
                 try
                 {
-                    user = await _graphClient.Users[data.UserId ?? data.UserPrincipalName].Request().GetAsync();
+                    user = await _graphClient.Users[data.userId ?? data.userPrincipalName].Request().GetAsync();
                 }
                 catch (Exception ex)
                 {
-                    log.LogError($"User with Id/UserPrincipalName : {data.UserId}/{data.UserPrincipalName} does not exist.");
+                    log.LogError($"User with Id/UserPrincipalName : {data.userId}/{data.userPrincipalName} does not exist.");
                     throw;
                 }
 
-                foreach (var item in data.Groups)
+                foreach (var item in data.groups)
                 {
                     if (string.IsNullOrEmpty(item.GroupId) && string.IsNullOrEmpty(item.GroupName))
                         continue;
@@ -84,7 +82,7 @@ namespace Xentegra.Functions
                     }
                 }
 
-                var groups = data.Groups.Where(x => !String.IsNullOrEmpty(x.GroupId));
+                var groups = data.groups.Where(x => !String.IsNullOrEmpty(x.GroupId));
 
                 var directoryObject = new DirectoryObject
                 {
@@ -93,13 +91,20 @@ namespace Xentegra.Functions
 
                 var groupMembersTaskList = groups.Select(x =>
                 {
-                    return _graphClient.Groups[x.GroupId].Members.References
-                    .Request()
-                    .AddAsync(directoryObject).ContinueWith(t =>
-                    {
-                        if (t.Status == System.Threading.Tasks.TaskStatus.Faulted)
-                            log.LogError(t.Exception, $"Failed to add user {user.UserPrincipalName} to group {x.GroupName}/{x.GroupName}");
-                    });
+                    if (data.action == OperationTypes.Add)
+                        return _graphClient.Groups[x.GroupId].Members.References
+                        .Request()
+                        .AddAsync(directoryObject).ContinueWith(t =>
+                        {
+                            if (t.Status == System.Threading.Tasks.TaskStatus.Faulted)
+                                log.LogError(t.Exception, $"Failed to add user {user.UserPrincipalName} to group {x.GroupName}/{x.GroupName}");
+                        });
+                    else if (data.action == OperationTypes.Delete)
+                        return _graphClient.Groups[x.GroupId].Members[directoryObject.Id].Reference
+                       .Request()
+                       .DeleteAsync();
+                    else
+                        return Task.CompletedTask;
                 });
 
                 await Task.WhenAll(groupMembersTaskList);
