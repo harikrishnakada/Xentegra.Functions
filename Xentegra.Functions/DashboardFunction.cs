@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+
+using AutoMapper;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -28,9 +31,12 @@ namespace Xentegra.Functions
     {
         private readonly IItemsContainer _itemsContainer;
 
-        public DashboardFunction(IItemsContainer itemsContainer)
+        private readonly IMapper _mapper;
+
+        public DashboardFunction(IItemsContainer itemsContainer, IMapper mapper)
         {
             _itemsContainer = itemsContainer;
+            _mapper = mapper;
         }
 
         [FunctionName("UpsertDemoRequest")]
@@ -87,22 +93,8 @@ namespace Xentegra.Functions
                     response = await this._itemsContainer.ReadAndUpsertItem<DemoRequest>(demoRequest.id, demoRequest.pk, SetEntity);
                 }
 
-                DemoRequestDTO demoRequestDTO = new()
-                {
-                    id = response.id,
-                    name = response.name,
-                    email = response.email,
-                    requestType = response.requestType,
-                    company = response.company,
-                    requestStatus = response.requestStatus,
-                    phone = response.phone,
-                    technology = new()
-                    {
-                        id = technology.id,
-                        name = technology.name,
-                        resourceGroupName = technology.resourceGroupName
-                    }
-                };
+                DemoRequestDTO demoRequestDTO = this._mapper.Map<DemoRequestDTO>(response);
+                demoRequestDTO.technology = this._mapper.Map<TechnologyDTO>(technology);
 
                 return new OkObjectResult(demoRequestDTO);
             }
@@ -121,25 +113,25 @@ namespace Xentegra.Functions
         public async Task<IActionResult> GetAllDemoRequests(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = "dashboard/getAllDemoRequests")] HttpRequest req, ILogger log)
         {
-            var items = await _itemsContainer.GetItems<dynamic>(log: log);
+            IEnumerable<dynamic> items = await _itemsContainer.GetItems<ExpandoObject>(log: log);
 
-            var demoRequests = items.Where(x => x.enityType == typeof(DemoRequest).ToString());
-            var technologioes = items.Where(x => x.enityType == typeof(Technology).ToString());
+            var demoRequests = this._mapper.Map<IEnumerable<DemoRequestDTO>>(items.Where(x => x.enityType == typeof(DemoRequest).ToString()));
+            var technologioes = this._mapper.Map<IEnumerable<TechnologyDTO>>(items.Where(x => x.enityType == typeof(Technology).ToString()));
 
             var demoRequestsDto = from dr in demoRequests
-                      join t in technologioes on dr.technology?.id equals t.id
-                      select new
-                      {
-                          dr,
-                          t
-                      };
+                                  join t in technologioes on dr.technology?.id equals t.id
+                                  select new
+                                  {
+                                      dr,
+                                      t
+                                  };
 
             foreach (var item in demoRequestsDto)
             {
                 item.dr.technology = item.t;
             }
 
-            return new OkObjectResult(demoRequestsDto.Select(x=>x.dr));
+            return new OkObjectResult(demoRequestsDto.Select(x => x.dr));
         }
 
         [FunctionName("UpsertTechnology")]
@@ -180,7 +172,7 @@ namespace Xentegra.Functions
             return new OkObjectResult(response);
         }
 
-        
+
 
         [FunctionName("UpsertTechnologyBulk")]
         [OpenApiOperation(operationId: "UpsertTechnology", tags: new[] { "name" })]
@@ -203,7 +195,7 @@ namespace Xentegra.Functions
                 }
 
                 var result = await Task.WhenAll(taskList);
-                output = result.Select(x=>x.Resource).ToList();
+                output = result.Select(x => x.Resource).ToList();
             }
             catch (Exception ex)
             {

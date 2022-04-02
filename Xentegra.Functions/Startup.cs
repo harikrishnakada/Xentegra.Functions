@@ -46,12 +46,12 @@ namespace Xentegra.Functions
             builder.Services.AddSingleton<IAzure>((s) => { return azure; });
             builder.Services.AddSingleton<GraphServiceClient>((s) => { return graphClient; });
 
-
             var cosmos_cs = Environment.GetEnvironmentVariable("COSMOSDB_CS");
             CosmosClient cosmosClient = new(cosmos_cs);
 
             builder.Services.AddSingleton(cosmosClient);
             builder.Services.AddSingleton<IItemsContainer, ItemsContainer>();
+            builder.Services.AddAutoMapper(typeof(Startup));
         }
 
         private static async Task<GraphServiceClient> GetGraphApiClient()
