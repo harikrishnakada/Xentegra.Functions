@@ -30,12 +30,14 @@ namespace Xentegra.Functions
     public class DashboardFunction
     {
         private readonly IItemsContainer _itemsContainer;
+        private readonly ILookupContainer _lookupContainer;
 
         private readonly IMapper _mapper;
 
-        public DashboardFunction(IItemsContainer itemsContainer, IMapper mapper)
+        public DashboardFunction(IItemsContainer itemsContainer, ILookupContainer lookupContainer, IMapper mapper)
         {
             _itemsContainer = itemsContainer;
+            _lookupContainer = lookupContainer;
             _mapper = mapper;
         }
 
@@ -50,6 +52,7 @@ namespace Xentegra.Functions
             try
             {
                 log.LogInformation("C# HTTP trigger function processed a request.");
+                var requestId = Guid.NewGuid().ToString();
 
                 DemoRequest response;
 
@@ -59,7 +62,7 @@ namespace Xentegra.Functions
                     return new BadRequestObjectResult($"The technology is blank in the request");
                 }
 
-                Technology technology = await this._itemsContainer.GetItem<Technology>(demoRequest.technology.id, demoRequest.technology?.GetPartitionKey());
+                Technology technology = await this._lookupContainer.GetItem<Technology>(demoRequest.technology.id, demoRequest.technology?.pk, log, requestId: requestId);
                 if (technology == null)
                 {
                     log.LogError($"The technology with name {technology.name} does not exist");
@@ -81,7 +84,7 @@ namespace Xentegra.Functions
                         name = demoRequest.technology.name,
                     };
 
-                    response = await this._itemsContainer.CreateItemAsync<DemoRequest>(demoRequest, demoRequest.pk);
+                    response = await this._itemsContainer.CreateItemAsync<DemoRequest>(demoRequest, demoRequest.pk, log, requestId: requestId);
                 }
                 else
                 {
@@ -90,7 +93,7 @@ namespace Xentegra.Functions
                         item.SetEntity(demoRequest);
                         return item;
                     }
-                    response = await this._itemsContainer.ReadAndUpsertItem<DemoRequest>(demoRequest.id, demoRequest.pk, SetEntity);
+                    response = await this._itemsContainer.ReadAndUpsertItem<DemoRequest>(demoRequest.id, demoRequest.pk, SetEntity, log, requestId: requestId);
                 }
 
                 DemoRequestDTO demoRequestDTO = this._mapper.Map<DemoRequestDTO>(response);
@@ -113,10 +116,12 @@ namespace Xentegra.Functions
         public async Task<IActionResult> GetAllDemoRequests(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = "dashboard/getAllDemoRequests")] HttpRequest req, ILogger log)
         {
-            IEnumerable<dynamic> items = await _itemsContainer.GetItems<ExpandoObject>(log: log);
+            var requestId = Guid.NewGuid().ToString();
+            IEnumerable<dynamic> demoRequestItems = await _itemsContainer.GetItems<ExpandoObject>(log: log, requestId: requestId);
+            IEnumerable<Technology> technologyItems = await _lookupContainer.GetItems<Technology>(log: log, requestId: requestId);
 
-            var demoRequests = this._mapper.Map<IEnumerable<DemoRequestDTO>>(items.Where(x => x.enityType == typeof(DemoRequest).ToString()));
-            var technologioes = this._mapper.Map<IEnumerable<TechnologyDTO>>(items.Where(x => x.enityType == typeof(Technology).ToString()));
+            var demoRequests = this._mapper.Map<IEnumerable<DemoRequestDTO>>(demoRequestItems.Where(x => x.entityType == typeof(DemoRequest).ToString()));
+            var technologioes = this._mapper.Map<IEnumerable<TechnologyDTO>>(technologyItems.Where(x => x.entityType == typeof(Technology).ToString()));
 
             var demoRequestsDto = from dr in demoRequests
                                   join t in technologioes on dr.technology?.id equals t.id
@@ -142,6 +147,8 @@ namespace Xentegra.Functions
         public async Task<IActionResult> UpsertTechnology(
         [HttpTrigger(AuthorizationLevel.Function, "post", Route = "dashboard/upsertTechnology")] Technology technology, HttpRequest req, ILogger log)
         {
+            var requestId = Guid.NewGuid().ToString();
+
             //set the partitionkey.
             technology.SetPartitionKey();
 
@@ -151,7 +158,7 @@ namespace Xentegra.Functions
                 if (string.IsNullOrEmpty(technology.id))
                 {
                     technology.OnCreated();
-                    response = await this._itemsContainer.CreateItemAsync<Technology>(technology, technology.pk);
+                    response = await this._itemsContainer.CreateItemAsync<Technology>(technology, technology.pk, log, requestId: requestId);
                 }
                 else
                 {
@@ -161,7 +168,7 @@ namespace Xentegra.Functions
                         return item;
                     }
 
-                    response = await this._itemsContainer.ReadAndUpsertItem<Technology>(technology.id, technology.pk, SetEntity);
+                    response = await this._itemsContainer.ReadAndUpsertItem<Technology>(technology.id, technology.pk, SetEntity, log, requestId: requestId);
                 }
             }
             catch (Exception ex)
@@ -182,6 +189,7 @@ namespace Xentegra.Functions
         public async Task<IActionResult> UpsertTechnologyBulk(
        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "dashboard/createTechnologies/bulk")] List<Technology> technologies, HttpRequest req, ILogger log)
         {
+            var requestId = Guid.NewGuid().ToString();
             List<Task<ItemResponse<Technology>>> taskList = new();
             List<Technology> output;
             try
@@ -191,7 +199,7 @@ namespace Xentegra.Functions
                     //set the partitionkey.
                     technology.SetPartitionKey();
                     technology.OnCreated();
-                    taskList.Add(this._itemsContainer.CreateItemAsync<Technology>(technology, technology.pk));
+                    taskList.Add(this._lookupContainer.CreateItemAsync<Technology>(technology, technology.pk, log, requestId: requestId));
                 }
 
                 var result = await Task.WhenAll(taskList);

@@ -10,10 +10,9 @@ using Xentegra.Models.Interfaces;
 
 namespace Xentegra.Models
 {
-    public class DemoRequest : DomainModelBase, IPartitionKey
+    public class DemoRequest : DomainModelBase<DemoRequest>, IPartitionKey
     {
         public string requestType { get; set; }
-        public string enityType { get; set; }
         public string name { get; set; }
         public string email { get; set; }
         public string phone { get; set; }
@@ -35,7 +34,7 @@ namespace Xentegra.Models
             technology = entity.technology;
             requestStatus = entity.requestStatus;
 
-            enityType = typeof(DemoRequest).ToString();
+            entityType = GetEntityType();
 
             //Only save the necessary information.
             technology = new()
@@ -51,7 +50,7 @@ namespace Xentegra.Models
 
         public override void OnCreated(string? _id = null)
         {
-            this.enityType = typeof(DemoRequest).ToString();
+            this.entityType = GetEntityType();
             base.OnCreated(_id);
         }
     }

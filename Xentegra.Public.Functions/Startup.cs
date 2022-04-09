@@ -30,6 +30,7 @@ namespace Xentegra.Public.Functions
 
             builder.Services.AddSingleton(cosmosClient);
             builder.Services.AddSingleton<IItemsContainer, ItemsContainer>();
+            builder.Services.AddSingleton<ILookupContainer, LookupContainer>();
         }
     }
 }

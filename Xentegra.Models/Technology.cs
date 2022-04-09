@@ -8,22 +8,25 @@ using Xentegra.Models.Interfaces;
 
 namespace Xentegra.Models
 {
-    public class Technology : DomainModelBase, IPartitionKey
+    public class Technology : DomainModelBase<Technology>, IPartitionKey
     {
         public string name { get; set; }
-
-        public string enityType { get; set; }
 
         public string description { get; set; }
         public string resourceGroupName { get; set; }
 
         public void SetPartitionKey()
         {
-            this.pk = this.name;
+            this.entityType = GetEntityType();
+            this.pk = this.entityType;
         }
+
         public string GetPartitionKey()
         {
-           return this.name;
+            if (string.IsNullOrEmpty(this.pk))
+                this.SetPartitionKey();
+
+            return this.pk;
         }
 
         public Technology SetEntity(Technology entity)
@@ -32,7 +35,7 @@ namespace Xentegra.Models
             description = entity.description;
             resourceGroupName = entity.resourceGroupName;
 
-            enityType = typeof(Technology).ToString();
+            entityType = GetEntityType();
             SetAudit();
 
             return this;
@@ -40,7 +43,7 @@ namespace Xentegra.Models
 
         public override void OnCreated(string? _id = null)
         {
-            this.enityType = typeof(Technology).ToString();
+            this.entityType = GetEntityType();
             base.OnCreated(_id);
         }
     }

@@ -26,10 +26,12 @@ namespace Xentegra.Public.Functions
     public class DashboardFunction
     {
         private readonly IItemsContainer _itemsContainer;
+        private readonly ILookupContainer _lookupContainer;
 
-        public DashboardFunction(IItemsContainer itemsContainer)
+        public DashboardFunction(IItemsContainer itemsContainer, ILookupContainer lookupContainer)
         {
             _itemsContainer = itemsContainer;
+            _lookupContainer = lookupContainer;
         }
 
         [FunctionName("CreateDemoRequest")]
@@ -50,7 +52,7 @@ namespace Xentegra.Public.Functions
                     return new BadRequestObjectResult($"The technology is blank in the request");
                 }
 
-                Technology technology = await this._itemsContainer.GetItem<Technology>(demoRequest.technology?.id, demoRequest.technology.GetPartitionKey());
+                Technology technology = await this._itemsContainer.GetItem<Technology>(demoRequest.technology?.id, demoRequest.technology.pk);
                 if (technology == null)
                 {
                     log.LogError($"The technology with name {technology.name} does not exist");
@@ -85,7 +87,8 @@ namespace Xentegra.Public.Functions
                     {
                         id = technology.id,
                         name = technology.name,
-                        resourceGroupName = technology.resourceGroupName
+                        resourceGroupName = technology.resourceGroupName,
+                        pk = technology.pk
                     }
                 };
 
@@ -105,9 +108,10 @@ namespace Xentegra.Public.Functions
         public async Task<IActionResult> GetAllTechnologies(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = "public/dashboard/getAllTechnologies")] HttpRequest req, ILogger log)
         {
-            var items = await _itemsContainer.GetItems<Technology>(log: log);
+            var requestId = Guid.NewGuid().ToString();
+            var items = await _lookupContainer.GetItems<Technology>(log: log, requestId: requestId);
 
-            return new OkObjectResult(items.Where(x => x.enityType == typeof(Technology).ToString()));
+            return new OkObjectResult(items.Where(x => x.entityType == typeof(Technology).ToString()));
         }
 
     }

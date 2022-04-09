@@ -8,7 +8,15 @@ namespace Xentegra.Models.Constants
 {
     public static class LookupType
     {
-        public const string Technology = "TECHNOLOGY";
+       // public const string Technology = "TECHNOLOGY";
+    }
+
+    public static class EntityType<T> where T : class
+    {
+        public static string GetEntityType()
+        {
+            return typeof(T).ToString();
+        }
     }
 
     public static class RequestType

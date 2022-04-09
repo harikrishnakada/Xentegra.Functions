@@ -51,6 +51,7 @@ namespace Xentegra.Functions
 
             builder.Services.AddSingleton(cosmosClient);
             builder.Services.AddSingleton<IItemsContainer, ItemsContainer>();
+            builder.Services.AddSingleton<ILookupContainer, LookupContainer>();
             builder.Services.AddAutoMapper(typeof(Startup));
         }
 

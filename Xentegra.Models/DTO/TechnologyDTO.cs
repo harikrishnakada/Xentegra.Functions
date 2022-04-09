@@ -14,10 +14,12 @@ namespace Xentegra.Models.DTO
         public string name { get; set; }
 
         public string resourceGroupName { get; set; }
+        public string pk { get; set; }
+        public string entityType { get; set; }
 
         public string GetPartitionKey()
         {
-            return name;
+            return entityType;
         }
     }
 }

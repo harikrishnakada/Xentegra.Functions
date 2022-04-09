@@ -4,9 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using Xentegra.Models.Constants;
+
 namespace Xentegra.Models
 {
-    public class DomainModelBase
+    public class DomainModelBase<T> where T : class
     {
         public string id { get; set; }
 
@@ -14,6 +16,13 @@ namespace Xentegra.Models
         public DateTime lastChangedDateTime { get; set; }
 
         public string pk { get; set; }
+
+        private string _enityType;
+        public string entityType
+        {
+            get { return _enityType; }
+            set { _enityType = GetEntityType(); }
+        }
 
         public virtual void OnCreated(string? _id = null)
         {
@@ -37,6 +46,11 @@ namespace Xentegra.Models
                 OnCreated();
             else
                 OnChanged();
+        }
+
+        public virtual string GetEntityType()
+        {
+            return EntityType<T>.GetEntityType();
         }
     }
 }
