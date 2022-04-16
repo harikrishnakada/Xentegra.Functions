@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+
+using AutoMapper;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -27,11 +30,13 @@ namespace Xentegra.Public.Functions
     {
         private readonly IItemsContainer _itemsContainer;
         private readonly ILookupContainer _lookupContainer;
+        private readonly IMapper _mapper;
 
-        public DashboardFunction(IItemsContainer itemsContainer, ILookupContainer lookupContainer)
+        public DashboardFunction(IItemsContainer itemsContainer, ILookupContainer lookupContainer, IMapper mapper)
         {
             _itemsContainer = itemsContainer;
             _lookupContainer = lookupContainer;
+            _mapper = mapper;
         }
 
         [FunctionName("CreateDemoRequest")]
@@ -52,7 +57,7 @@ namespace Xentegra.Public.Functions
                     return new BadRequestObjectResult($"The technology is blank in the request");
                 }
 
-                Technology technology = await this._itemsContainer.GetItem<Technology>(demoRequest.technology?.id, demoRequest.technology.pk);
+                Technology technology = await this._lookupContainer.GetItem<Technology>(demoRequest.technology?.id, demoRequest.technology.pk);
                 if (technology == null)
                 {
                     log.LogError($"The technology with name {technology.name} does not exist");
@@ -74,23 +79,26 @@ namespace Xentegra.Public.Functions
 
                 response = await this._itemsContainer.CreateItemAsync<DemoRequest>(demoRequest, demoRequest.pk);
 
-                DemoRequestDTO demoRequestDTO = new()
-                {
-                    id = response.id,
-                    name = response.name,
-                    email = response.email,
-                    requestType = response.requestType,
-                    company = response.company,
-                    phone = response.phone,
-                    requestStatus = response.requestStatus,
-                    technology = new()
-                    {
-                        id = technology.id,
-                        name = technology.name,
-                        resourceGroupName = technology.resourceGroupName,
-                        pk = technology.pk
-                    }
-                };
+                //DemoRequestDTO demoRequestDTO = new()
+                //{
+                //    id = response.id,
+                //    name = response.name,
+                //    email = response.email,
+                //    requestType = response.requestType,
+                //    company = response.company,
+                //    phone = response.phone,
+                //    requestStatus = response.requestStatus,
+                //    technology = new()
+                //    {
+                //        id = technology.id,
+                //        name = technology.name,
+                //        resourceGroupName = technology.resourceGroupName,
+                //        pk = technology.pk
+                //    }
+                //};
+
+                DemoRequestDTO demoRequestDTO = this._mapper.Map<DemoRequestDTO>(response);
+                demoRequestDTO.technology = this._mapper.Map<TechnologyDTO>(technology);
 
                 return new OkObjectResult(demoRequestDTO);
             }
@@ -108,10 +116,18 @@ namespace Xentegra.Public.Functions
         public async Task<IActionResult> GetAllTechnologies(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = "public/dashboard/getAllTechnologies")] HttpRequest req, ILogger log)
         {
-            var requestId = Guid.NewGuid().ToString();
-            var items = await _lookupContainer.GetItems<Technology>(log: log, requestId: requestId);
+            try
+            {
+                var requestId = Guid.NewGuid().ToString();
+                var items = await _lookupContainer.GetItems<Technology>(log: log, requestId: requestId);
 
-            return new OkObjectResult(items.Where(x => x.entityType == typeof(Technology).ToString()));
+                var technologiesDto = this._mapper.Map<IEnumerable<TechnologyDTO>>(items.Where(x => x.entityType == typeof(Technology).ToString()));
+
+                return new OkObjectResult(technologiesDto);
+            }catch (Exception ex)
+            {
+                return new BadRequestObjectResult(ex.Message);
+            }
         }
 
     }

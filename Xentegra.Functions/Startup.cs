@@ -18,6 +18,7 @@ using Microsoft.Graph;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 
 using Xentegra.DataAccess.CosmosDB.Containers;
+using Xentegra.Extensions;
 
 [assembly: FunctionsStartup(typeof(Xentegra.Functions.Startup))]
 
@@ -52,7 +53,8 @@ namespace Xentegra.Functions
             builder.Services.AddSingleton(cosmosClient);
             builder.Services.AddSingleton<IItemsContainer, ItemsContainer>();
             builder.Services.AddSingleton<ILookupContainer, LookupContainer>();
-            builder.Services.AddAutoMapper(typeof(Startup));
+
+            builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
         }
 
         private static async Task<GraphServiceClient> GetGraphApiClient()

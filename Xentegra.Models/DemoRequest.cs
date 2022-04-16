@@ -13,12 +13,13 @@ namespace Xentegra.Models
     public class DemoRequest : DomainModelBase<DemoRequest>, IPartitionKey
     {
         public string requestType { get; set; }
-        public string name { get; set; }
-        public string email { get; set; }
-        public string phone { get; set; }
-        public string company { get; set; }
+        public string firstName { get; set; }
+        public string lastName { get; set; }
+        public string emailAddress { get; set; }
+        public string phoneNumber { get; set; }
         public TechnologyDTO technology { get; set; }
         public string requestStatus { get; set; }
+        public string addtionalNotes { get; set; }
         public void SetPartitionKey()
         {
             this.pk = technology.name;
@@ -27,12 +28,13 @@ namespace Xentegra.Models
         public DemoRequest SetEntity(DemoRequest entity)
         {
             requestType = entity.requestType;
-            name = entity.name;
-            email = entity.email;
-            phone = entity.phone;
-            company = entity.company;
+            firstName = entity.firstName;
+            lastName = entity.lastName;
+            emailAddress = entity.emailAddress;
+            phoneNumber = entity.phoneNumber;
             technology = entity.technology;
             requestStatus = entity.requestStatus;
+            addtionalNotes = entity.addtionalNotes;
 
             entityType = GetEntityType();
 

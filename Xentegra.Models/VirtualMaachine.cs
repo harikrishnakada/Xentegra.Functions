@@ -10,7 +10,9 @@ namespace Xentegra.Models
     {
         public string id { get; set; }
         public string name { get; set; }
+        public string osType { get; set; }
         public string status { get; set; }
+        public string powerState { get; set; }
         public bool isTurnedOn { get; set; }
         public string resourceGroupName { get; set; }
     }

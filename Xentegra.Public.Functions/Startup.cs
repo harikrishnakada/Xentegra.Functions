@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Xentegra.DataAccess.CosmosDB.Containers;
+using Xentegra.Extensions;
 
 [assembly: FunctionsStartup(typeof(Xentegra.Public.Functions.Startup))]
 
@@ -31,6 +32,8 @@ namespace Xentegra.Public.Functions
             builder.Services.AddSingleton(cosmosClient);
             builder.Services.AddSingleton<IItemsContainer, ItemsContainer>();
             builder.Services.AddSingleton<ILookupContainer, LookupContainer>();
+
+            builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
         }
     }
 }

@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xentegra.Public.Functions",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xentegra.DataAccess", "Xentegra.DataAccess\Xentegra.DataAccess.csproj", "{39D4292F-6A3C-44AC-BAEE-B64C0EF5180B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xentegra.Extensions", "Xentegra.Extensions\Xentegra.Extensions.csproj", "{B8366D28-EF94-441F-A01C-3EF89A0393AA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{39D4292F-6A3C-44AC-BAEE-B64C0EF5180B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{39D4292F-6A3C-44AC-BAEE-B64C0EF5180B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{39D4292F-6A3C-44AC-BAEE-B64C0EF5180B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8366D28-EF94-441F-A01C-3EF89A0393AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8366D28-EF94-441F-A01C-3EF89A0393AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8366D28-EF94-441F-A01C-3EF89A0393AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8366D28-EF94-441F-A01C-3EF89A0393AA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

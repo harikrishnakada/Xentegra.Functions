@@ -1,7 +1,5 @@
 ﻿using AutoMapper;
 
-using Newtonsoft.Json.Linq;
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +9,7 @@ using System.Threading.Tasks;
 using Xentegra.Models;
 using Xentegra.Models.DTO;
 
-namespace Xentegra.Functions.Extensions
+namespace Xentegra.Extensions
 {
     public class AutoMapperProfile: Profile
     {

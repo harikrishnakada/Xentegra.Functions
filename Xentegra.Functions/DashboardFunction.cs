@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 using Xentegra.DataAccess.CosmosDB.Containers;
 using Xentegra.Models;
@@ -130,13 +131,19 @@ namespace Xentegra.Functions
                                       dr,
                                       t
                                   };
-
+            var demoRequestList = new List<object>();
             foreach (var item in demoRequestsDto)
             {
                 item.dr.technology = item.t;
+                var objToken = JToken.FromObject(item.dr);
+                var obj = objToken
+    .SelectTokens("$..*")
+    .Where(t => !t.HasValues)
+    .ToDictionary(t => t.Path, t => t.ToString());
+                demoRequestList.Add(obj);
             }
 
-            return new OkObjectResult(demoRequestsDto.Select(x => x.dr));
+            return new OkObjectResult(demoRequestList);
         }
 
         [FunctionName("UpsertTechnology")]

@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="11.0.1" />
+    <ProjectReference Include="..\Xentegra.Models\Xentegra.Models.csproj" />
   </ItemGroup>
 
 </Project>
