@@ -15,5 +15,7 @@ namespace Xentegra.Models
         public string powerState { get; set; }
         public bool isTurnedOn { get; set; }
         public string resourceGroupName { get; set; }
+
+        public string entityType { get; set; }
     }
 }

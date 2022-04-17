@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Management.Compute.Fluent;
 using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
@@ -25,15 +26,11 @@ namespace Xentegra.Functions
 {
     public class VMFunctions
     {
-        private readonly ILogger<VMFunctions> _logger;
         private readonly IAzure _azure;
-        private readonly GraphServiceClient _graphServiceClient;
 
-        public VMFunctions(ILogger<VMFunctions> log, IAzure azure, GraphServiceClient graphServiceClient)
+        public VMFunctions(IAzure azure)
         {
-            _logger = log;
             _azure = azure;
-            _graphServiceClient = graphServiceClient;
         }
 
         [FunctionName("GetAllVMByResourceGroupFunction")]
@@ -42,17 +39,53 @@ namespace Xentegra.Functions
         [OpenApiParameter(name: "name", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "The **Name** parameter")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
         public async Task<IActionResult> GetAllVMByResourceGroupFunction(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "vm/{rg}")] HttpRequest req, ILogger log, string rg)
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "vm/resourceGroup/{rg}")] HttpRequest req, ILogger log, string rg)
         {
-            log.LogInformation("log C# HTTP trigger function processed a request.");
-
-            var vms = new List<VirtualMaachine>();
-
-            foreach (var virtualMachine in _azure.VirtualMachines.ListByResourceGroup(rg))
+            try
             {
-                _logger.LogInformation($"{virtualMachine.Name}");
 
-                var obj = new { virtualMachine.Id, virtualMachine.Name, virtualMachine.OSType, virtualMachine.PowerState };
+                var vms = new List<VirtualMaachine>();
+
+                foreach (var virtualMachine in _azure.VirtualMachines.ListByResourceGroup(rg))
+                {
+                    log.LogInformation($"{virtualMachine.Name}");
+
+                    VirtualMaachine vm = new()
+                    {
+                        id = virtualMachine.Id,
+                        name = virtualMachine.Name,
+                        osType = virtualMachine.OSType.ToString(),
+                        powerState = virtualMachine.PowerState.Value,
+                        resourceGroupName = virtualMachine.ResourceGroupName,
+                        isTurnedOn = virtualMachine.PowerState.Value switch
+                        {
+                            VMPowerStateCode.Allocated => true,
+                            VMPowerStateCode.Deallocated => false,
+                            _ => false
+                        }
+                    };
+                    vms.Add(vm);
+                }
+                return new OkObjectResult(vms);
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, ex.Message);
+                return new BadRequestObjectResult(ex.Message);
+            }
+        }
+
+        [FunctionName("GetVMById")]
+        [OpenApiOperation(operationId: "Run", tags: new[] { "name" })]
+        [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
+        [OpenApiParameter(name: "name", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "The **Name** parameter")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
+        public async Task<IActionResult> GetVMById(
+           [HttpTrigger(AuthorizationLevel.Function, "get", Route = "vm/{vmId}")] HttpRequest req, ILogger log, string vmId)
+        {
+            try
+            {
+                var virtualMachine = await _azure.VirtualMachines.GetByIdAsync(vmId);
                 VirtualMaachine vm = new()
                 {
                     id = virtualMachine.Id,
@@ -67,56 +100,78 @@ namespace Xentegra.Functions
                         _ => false
                     }
                 };
-                vms.Add(vm);
+                return new OkObjectResult(vm);
             }
-            return new OkObjectResult(vms);
+            catch (Exception ex)
+            {
+                log.LogError(ex, ex.Message);
+                return new BadRequestObjectResult(ex.Message);
+            }
         }
 
-        [FunctionName("ToggleVMFunction")]
+        [FunctionName("ToggleVMState")]
         [OpenApiOperation(operationId: "Run", tags: new[] { "name" })]
         [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
         [OpenApiParameter(name: "name", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "The **Name** parameter")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
         [return: Queue("vm-queue", Connection = "CLOUD_STORAGE_CS")]
-        public async Task<IActionResult> ToggleVMFunction(
+        public async Task<IActionResult> ToggleVMState(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = "vm/status/{turnOn}")] VirtualMaachine vm, HttpRequest req, ILogger log, bool turnOn)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
-
-            var virtualMachine = _azure.VirtualMachines.GetById(vm.id);
-
-            //if (turnOn)
-            //    await virtualMachine.StartAsync();
-            //else
-            //    await virtualMachine.DeallocateAsync();
-
-            var queueMessage = new
+            try
             {
-                vmId = vm.id,
-                turnOn = turnOn
-            };
+                var virtualMachine = await _azure.VirtualMachines.GetByIdAsync(vm.id);
 
-            return new OkObjectResult(queueMessage);
+                if (virtualMachine == null)
+                    throw new KeyNotFoundException("VM not found");
+
+                var queueMessage = new
+                {
+                    vmId = vm.id,
+                    turnOn = turnOn
+                };
+
+                return new OkObjectResult(queueMessage);
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, ex.Message);
+                throw;
+            }
         }
 
-        [FunctionName("QueueTrigger")]
-        public async Task QueueTrigger(
-       [QueueTrigger("vm-queue", Connection = "CLOUD_STORAGE_CS") ] dynamic queueItem,
+        [FunctionName("ToggleVMStateQueueTrigger")]
+        public async Task ToggleVMStateQueueTrigger(
+       [QueueTrigger("vm-queue", Connection = "CLOUD_STORAGE_CS")] dynamic queueItem,
        ILogger log)
         {
             try
             {
                 log.LogInformation($"C# function processed: {queueItem}");
+                string vmId = queueItem.Value?.vmId;
+                bool turnOn = queueItem.Value.turnOn;
 
-                var virtualMachine = _azure.VirtualMachines.GetById(queueItem.vmId);
+                IVirtualMachine virtualMachine = await _azure.VirtualMachines.GetByIdAsync(vmId);
 
-                if (queueItem.turnOn)
+                log.LogInformation($"Current status of the VM: {virtualMachine.PowerState.Value}");
+
+                if (turnOn)
+                {
+                    log.LogInformation($"Turning on the VM: {virtualMachine.Name}");
                     await virtualMachine.StartAsync();
+                    log.LogInformation($"Turned on the VM: {virtualMachine.Name}");
+                }
                 else
+                {
+                    log.LogInformation($"Turning off the VM: {virtualMachine.Name}");
                     await virtualMachine.DeallocateAsync();
-            }catch(Exception ex)
+                    log.LogInformation($"Turned off the VM: {virtualMachine.Name}");
+                }
+            }
+            catch (Exception ex)
             {
                 log.LogError(ex, ex.Message);
+                throw;
             }
         }
 
