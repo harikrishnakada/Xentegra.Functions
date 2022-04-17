@@ -15,6 +15,8 @@ using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Enums;
 using Xentegra.Models.DTO;
 using System.Linq;
 using Xentegra.Models.Constants;
+using Xentegra.Models.Graph;
+using System.Collections.Generic;
 
 namespace Xentegra.Functions
 {
@@ -114,6 +116,53 @@ namespace Xentegra.Functions
             catch (Exception ex)
             {
                 return new BadRequestObjectResult(ex);
+            }
+        }
+
+        [FunctionName("GetGroupMembers")]
+        [OpenApiOperation(operationId: "Run", tags: new[] { "name" })]
+        [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
+        [OpenApiParameter(name: "name", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "The **Name** parameter")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
+        public async Task<IActionResult> GetGroupMembers(
+    [HttpTrigger(AuthorizationLevel.Function, "get", Route = "graph/group/{groupName}/groupMembers")] HttpRequest req, ILogger log, string groupName)
+        {
+            try
+            {
+                var group = await _graphClient.Groups.Request()
+                                        .Filter($"displayName eq '{groupName}'")
+                                        .GetAsync();
+
+                if (group == null || !group.Any())
+                {
+                    log.LogError($"Group with Id/Name : {groupName} does not exist");
+                    return new BadRequestObjectResult($"Group with Id/Name : {groupName} does not exist");
+                }
+
+                var members = await _graphClient.Groups[group.FirstOrDefault()?.Id].Members
+                                    .Request()
+                                    .GetAsync();
+
+                IList<GraphUser> graphUserList = new List<GraphUser>();
+                foreach (User user in members.OfType<User>())
+                {
+                    GraphUser graphUser = new()
+                    {
+                        id = user.Id,
+                        name = user.DisplayName,
+                        userPrincipalName = user.UserPrincipalName
+                    };
+
+                    graphUserList.Add(graphUser);
+                }
+
+                return new OkObjectResult(graphUserList);
+
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, ex.Message);
+                return new BadRequestObjectResult(ex.Message);
             }
         }
     }
